@@ -1,0 +1,1425 @@
+/**
+ * ToKo - Modern SaaS Aesthetic Design System
+ * 100% Exact Pixel Replica of Royal Blue & White Student Dashboard Reference
+ * Clean, fluid, no harsh borders, zero stiffness, modern SaaS UX
+ */
+
+:root {
+    --canvas-bg: #3556d6;
+    --canvas-bg-gradient: linear-gradient(135deg, #2b49c0 0%, #3b5bdb 50%, #2f4fcb 100%);
+    --sidebar-bg: #3556d6;
+    --sidebar-strip-bg: #2d4bc0;
+    --sidebar-text: #c7d2fe;
+    --sidebar-text-hover: #ffffff;
+    --sidebar-active-bg: #ffffff;
+    --sidebar-active-text: #1e293b;
+    --main-bg: #f5f7fb;
+    --card-bg: #ffffff;
+    --card-border: #edf2f7;
+    --primary: #3b5bdb;
+    --primary-hover: #2b49c0;
+    --primary-light: #eff6ff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    --border: #e2e8f0;
+    --radius-pill: 30px;
+    --radius-xl: 32px;
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 8px;
+    --shadow-window: 0 35px 80px -15px rgba(10, 25, 60, 0.45);
+    --shadow-card: 0 4px 16px rgba(15, 23, 42, 0.04);
+    --shadow-pill: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #ffffff;
+    color: var(--text-main);
+    min-height: 100vh;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 1. Canvas Top Header - Hidden in fullscreen mode */
+.canvas-header {
+    display: none;
+}
+
+.canvas-title {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin: 0;
+}
+
+.canvas-mode-pill {
+    background: #ffffff;
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 24px;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.canvas-mode-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+/* 2. Main Full-Screen App Shell */
+.app-shell {
+    width: 100%;
+    min-height: 100vh;
+    background: #ffffff;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 3. Left Royal Blue Sidebar */
+.sidebar {
+    width: 250px;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 50;
+}
+
+/* Left Slim Icon Column (Reference Far Left Icons) */
+.sidebar-strip {
+    width: 52px;
+    background: rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 86px;
+    gap: 22px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-strip-icon {
+    width: 20px;
+    height: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.sidebar-strip-icon:hover {
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+/* Main Sidebar Menu Area */
+.sidebar-main {
+    flex: 1;
+    padding: 28px 18px 28px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 34px;
+    padding-left: 6px;
+}
+
+.sidebar-brand-icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+.sidebar-menu {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--radius-pill);
+    transition: var(--transition);
+}
+
+.sidebar-link:hover {
+    color: var(--sidebar-text-hover);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Active Menu Item: WHITE CAPSULE PILL */
+.sidebar-link.active {
+    background: var(--sidebar-active-bg);
+    color: var(--sidebar-active-text);
+    font-weight: 700;
+    box-shadow: var(--shadow-pill);
+    transform: translateX(4px);
+}
+
+.sidebar-link.active svg {
+    color: var(--primary);
+}
+
+.sidebar-footer {
+    padding-top: 20px;
+    padding-left: 8px;
+}
+
+.btn-sidebar-logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    opacity: 0.85;
+    transition: var(--transition);
+}
+
+.btn-sidebar-logout:hover {
+    opacity: 1;
+    transform: translateX(3px);
+}
+
+/* 4. Main White Application Area */
+.main-content {
+    flex: 1;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+/* Top Navigation Bar */
+.topbar {
+    background: #ffffff;
+    padding: 22px 34px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+
+/* Search Pill */
+.topbar-search {
+    position: relative;
+    width: 340px;
+}
+
+.topbar-search input {
+    width: 100%;
+    padding: 11px 40px 11px 18px;
+    border-radius: var(--radius-pill);
+    border: 1px solid #f1f5f9;
+    background: #f8fafc;
+    font-size: 13px;
+    color: var(--text-main);
+    outline: none;
+    transition: var(--transition);
+}
+
+.topbar-search input:focus {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.12);
+}
+
+.topbar-search svg {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+/* Topbar Actions */
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.lang-pill {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    transition: var(--transition);
+}
+
+.lang-pill:hover {
+    background: #f1f5f9;
+}
+
+.topbar-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    text-decoration: none;
+    position: relative;
+    transition: var(--transition);
+}
+
+.topbar-icon-btn:hover {
+    background: #f1f5f9;
+    color: var(--text-main);
+}
+
+.topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-pill);
+    transition: var(--transition);
+}
+
+.topbar-user:hover {
+    background: #f8fafc;
+}
+
+.topbar-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e0e7ff;
+    color: #3b5bdb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.topbar-user-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+/* Page Body */
+.page-body {
+    padding: 10px 34px 34px;
+    flex: 1;
+}
+
+/* Flash Alerts */
+.alert {
+    padding: 14px 20px;
+    border-radius: var(--radius-md);
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13.5px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.alert-danger {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* 5. Dashboard Grid Architecture */
+.dash-layout {
+    display: grid;
+    grid-template-columns: 2.1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.dash-main-col {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.dash-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+/* Welcome Card (Exact match: "Hello Grace!") */
+.welcome-card {
+    background: #f8fafc;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 26px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-content h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 8px;
+    letter-spacing: -0.4px;
+}
+
+.welcome-content p {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    max-width: 380px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.welcome-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.welcome-link:hover {
+    color: var(--primary-hover);
+}
+
+.welcome-illus {
+    flex-shrink: 0;
+}
+
+/* Performance & My Visit Dual Grid */
+.dual-cards-row {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 20px;
+}
+
+/* Generic Sleek White Card */
+.sleek-card {
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-card);
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.card-top-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.3px;
+}
+
+.dropdown-pill {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-pill);
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Performance Card Specifics */
+.perf-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.perf-score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 20px;
+}
+
+.perf-score {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -1px;
+}
+
+.perf-sub-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: 6px;
+}
+
+.pill-outline-btn {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.pill-outline-btn:hover {
+    background: #f1f5f9;
+}
+
+/* 6 Vertical Bars (Exact reference match) */
+.bars-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 160px;
+    padding-top: 10px;
+    gap: 8px;
+}
+
+.bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.bar-val {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.bar-pillar {
+    width: 22px;
+    height: 100px;
+    background: #eff6ff;
+    border-radius: 11px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.bar-pillar-fill {
+    width: 100%;
+    background: var(--primary);
+    border-radius: 11px 11px 0 0;
+    transition: height 0.6s ease;
+}
+
+.bar-pillar-topfill {
+    width: 100%;
+    background: #93c5fd;
+    border-radius: 11px 11px 0 0;
+}
+
+.bar-lbl {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 8px;
+    height: 24px;
+    word-break: break-word;
+}
+
+/* 6 Circular Ring Gauges ("My visit" 2x3 Grid) */
+.gauges-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 12px;
+    padding-top: 4px;
+}
+
+.gauge-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.gauge-circle {
+    width: 62px;
+    height: 62px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gauge-circle svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.gauge-circle-bg {
+    fill: none;
+    stroke: #eff6ff;
+    stroke-width: 5;
+}
+
+.gauge-circle-stroke {
+    fill: none;
+    stroke: var(--primary);
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+
+.gauge-percent {
+    position: absolute;
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.gauge-lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.2;
+}
+
+/* Linked Teachers / Staff List (Below Performance) */
+.teachers-card {
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-card);
+}
+
+.teachers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.teacher-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.teacher-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.teacher-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 13px;
+}
+
+.teacher-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.teacher-role {
+    font-size: 11.5px;
+    color: var(--text-muted);
+}
+
+.teacher-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.action-circle-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.action-circle-btn:hover {
+    background: #f1f5f9;
+    color: var(--primary);
+}
+
+/* 6. Right Column (Calendar & Upcoming Events) */
+/* Calendar Timeline (Exact Match) */
+.calendar-card {
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-card);
+}
+
+.cal-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.timeline-slot {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    align-items: center;
+    gap: 12px;
+    min-height: 38px;
+}
+
+.timeline-time {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+/* Active Highlighted Blue Pill Card (10:00 Electronics lesson) */
+.schedule-pill-active {
+    background: var(--primary);
+    color: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 14px rgba(59, 91, 219, 0.28);
+}
+
+.schedule-pill-active-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.schedule-pill-active-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.schedule-pill-active-sub {
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 2px;
+}
+
+/* Dotted Line connecting 11:00 */
+.timeline-dotted-line {
+    border-top: 2px dotted #cbd5e1;
+    width: 100%;
+    height: 0;
+}
+
+/* Soft Gray Pill Card (11:30, 12:30, 13:30) */
+.schedule-pill-gray {
+    background: #f8fafc;
+    border: 1px solid #eef2f6;
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.schedule-pill-gray-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.schedule-pill-gray-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.schedule-pill-gray-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Upcoming Events Card */
+.events-card {
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-card);
+}
+
+.events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.event-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.event-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #1e293b;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 14px;
+    overflow: hidden;
+}
+
+.event-details {
+    flex: 1;
+}
+
+.event-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.3;
+}
+
+.event-date {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+.event-menu {
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 4px;
+}
+
+/* 7. Components for Other Pages (Pelanggan, Produk, Transaksi, Laporan, Log) */
+.card {
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-card);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.3px;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: var(--radius-pill);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: var(--transition);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(59, 91, 219, 0.25);
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(59, 91, 219, 0.35);
+}
+
+.btn-secondary {
+    background: #f8fafc;
+    color: var(--text-main);
+    border-color: #cbd5e1;
+}
+
+.btn-secondary:hover {
+    background: #f1f5f9;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 12px;
+    border-radius: var(--radius-pill);
+}
+
+/* Form Controls */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 6px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: #ffffff;
+    font-size: 13.5px;
+    color: var(--text-main);
+    outline: none;
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.12);
+}
+
+/* Tables */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.table th {
+    text-align: left;
+    padding: 12px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+}
+
+.table td {
+    padding: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text-main);
+    vertical-align: middle;
+}
+
+.table tbody tr:hover td {
+    background: #fbfcfe;
+}
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.badge-primary { background: #eff6ff; color: #1d4ed8; }
+.badge-success { background: #ecfdf5; color: #047857; }
+.badge-warning { background: #fffbeb; color: #b45309; }
+.badge-danger { background: #fef2f2; color: #b91c1c; }
+.badge-info { background: #ecfeff; color: #0e7490; }
+
+/* Simple Professional Footer */
+.app-footer-simple {
+    background: #ffffff;
+    border-top: 1px solid var(--card-border);
+    padding: 16px 34px;
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    color: var(--text-muted);
+}
+
+.footer-simple-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.status-indicator-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    display: inline-block;
+}
+
+/* Authentic Thermal POS Receipt (Matches Alfamart Thermal Slip Photo) */
+.thermal-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0 40px;
+}
+
+.thermal-paper {
+    width: 340px;
+    background: #ffffff;
+    color: #111827;
+    font-family: 'Courier New', Courier, 'Lucida Console', Monaco, monospace;
+    font-size: 13px;
+    line-height: 1.45;
+    padding: 30px 24px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+    position: relative;
+    border-radius: 2px;
+}
+
+/* Jagged Sawtooth Tear Effect Top & Bottom */
+.thermal-paper::before,
+.thermal-paper::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background-size: 14px 8px;
+}
+
+.thermal-paper::before {
+    top: -8px;
+    background-image: radial-gradient(circle at 7px 0, transparent 7px, #ffffff 7px);
+}
+
+.thermal-paper::after {
+    bottom: -8px;
+    background-image: radial-gradient(circle at 7px 8px, transparent 7px, #ffffff 7px);
+}
+
+.receipt-header {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.receipt-logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #0f172a;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.receipt-tagline {
+    font-size: 11px;
+    font-style: italic;
+    color: #475569;
+    border-bottom: 2px solid #1e293b;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+    display: inline-block;
+    letter-spacing: 0.3px;
+}
+
+.receipt-store-info {
+    font-size: 12px;
+    color: #334155;
+    line-height: 1.35;
+    margin-top: 4px;
+}
+
+.receipt-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin: 12px 0 6px;
+    font-weight: 600;
+}
+
+.receipt-divider {
+    border: none;
+    border-top: 1px dashed #475569;
+    margin: 6px 0 10px;
+}
+
+.receipt-items {
+    margin-bottom: 10px;
+}
+
+.receipt-item-block {
+    margin-bottom: 8px;
+}
+
+.receipt-item-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: #0f172a;
+    word-break: break-word;
+}
+
+.receipt-item-calc {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: #1e293b;
+    padding-left: 10px;
+}
+
+.receipt-total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 3px;
+}
+
+.receipt-total-row.main {
+    font-weight: 800;
+    font-size: 14px;
+    color: #0f172a;
+}
+
+/* Receipt Note / Catatan Transaksi */
+.receipt-note {
+    font-size: 11.5px;
+    color: #1e293b;
+    background: #f8fafc;
+    border: 1px dashed #94a3b8;
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin: 8px 0;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+/* Receipt QR Code Section */
+.receipt-qr-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 14px 0 10px;
+    text-align: center;
+}
+
+#receipt-qrcode {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
+#receipt-qrcode canvas,
+#receipt-qrcode img {
+    display: block;
+    margin: 0 auto;
+}
+
+.receipt-qr-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #475569;
+    text-transform: uppercase;
+    margin-top: 3px;
+}
+
+.receipt-qr-code-text {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 1px;
+    letter-spacing: 0.5px;
+}
+
+.receipt-footer-notes {
+    text-align: center;
+    font-size: 11.5px;
+    color: #334155;
+    margin-top: 14px;
+    line-height: 1.4;
+}
+
+.receipt-cashier {
+    margin: 10px 0 8px;
+    font-weight: 600;
+}
+
+.receipt-thanks {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* Receipt 1D Linear Barcode Section (Exact match to reference photo) */
+.receipt-barcode-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    padding-top: 4px;
+    text-align: center;
+}
+
+.barcode-svg-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+}
+
+.barcode-svg-container svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+/* Print Specific for Thermal POS */
+@media print {
+    body {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+
+    .canvas-header, .sidebar, .topbar, .no-print, .app-footer-simple, footer {
+        display: none !important;
+    }
+
+    .app-shell {
+        box-shadow: none !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        max-width: 100% !important;
+        min-height: auto !important;
+    }
+
+    .main-content {
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 0 !important;
+    }
+
+    .page-body {
+        padding: 0 !important;
+    }
+
+    .thermal-wrapper {
+        padding: 0 !important;
+    }
+
+    .thermal-paper {
+        box-shadow: none !important;
+        padding: 10px 0 !important;
+        width: 100% !important;
+        max-width: 80mm !important;
+    }
+
+    .thermal-paper::before,
+    .thermal-paper::after {
+        display: none !important;
+    }
+
+    @page {
+        size: 80mm auto;
+        margin: 5mm;
+    }
+}
+
+/* Responsive Media Queries */
+@media (max-width: 1200px) {
+    .dash-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .app-shell {
+        flex-direction: column;
+        border-radius: 20px;
+    }
+
+    .sidebar {
+        width: 100%;
+    }
+
+    .sidebar-strip {
+        display: none;
+    }
+
+    .sidebar-main {
+        padding: 16px 20px;
+    }
+
+    .sidebar-menu {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .dual-cards-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media print {
+    body {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+
+    .canvas-header, .sidebar, .topbar, .no-print {
+        display: none !important;
+    }
+
+    .app-shell {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+    }
+}

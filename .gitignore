@@ -1,0 +1,25 @@
+# Operating System Files
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# IDE and Editor Directories
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary / Log files
+*.log
+error_log
+tests/*_smoke.php
+tests/temp_*.php
+scratch/
+
+# Pastikan file database dump tetap ter-commit ke GitHub
+!database/
+!database/*.sql
+!database_patch.sql
