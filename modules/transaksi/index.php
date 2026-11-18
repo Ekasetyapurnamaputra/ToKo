@@ -14,11 +14,40 @@ require_once dirname(dirname(__DIR__)) . '/models/Produk.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/security_helper.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/format_helper.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/barcode_helper.php';
+require_once dirname(dirname(__DIR__)) . '/models/MemberAccount.php';
 
 Auth::requireLogin();
 
 $action = $_GET['action'] ?? 'list';
 $error = '';
+if (Auth::hasRole('pelanggan')) {
+    if (!in_array($action, ['struk', 'detail'], true) || is_post()) {
+        header('Location: index.php?page=member');
+        exit;
+    }
+
+    $memberId = (int)(Auth::user()['id_pelanggan'] ?? 0);
+    if ($memberId <= 0) {
+        $m = MemberAccount::getMemberForUser((int)Auth::id());
+        $memberId = (int)($m['id_pelanggan'] ?? 0);
+    }
+
+    $ownsReceipt = \Database::getInstance()->fetchOne(
+        'SELECT id_transaksi FROM tbl_transaksi WHERE id_transaksi = :id AND id_pelanggan = :member_id',
+        [
+            ':id' => (int)($_GET['id'] ?? 0),
+            ':member_id' => $memberId
+        ]
+    );
+    if (!$ownsReceipt) {
+        http_response_code(404);
+        Session::setFlash('danger', 'Struk transaksi tidak ditemukan.');
+        header('Location: index.php?page=member');
+        exit;
+    }
+} else {
+    Auth::requireRole(['admin', 'kasir']);
+}
 
 // ====================================================================
 // 1. PROSES FORM POST (SIMPAN TRANSAKSI BARU)
@@ -46,7 +75,6 @@ if (is_post()) {
 
     $idPelanggan = (int)($_POST['id_pelanggan'] ?? 0);
     $diskon      = (float)($_POST['diskon'] ?? 0);
-    $uangBayar   = (float)($_POST['uang_bayar'] ?? 0);
     $catatan     = clean($_POST['catatan'] ?? '');
     $itemIds     = $_POST['item_id_produk'] ?? [];
     $itemQtys    = $_POST['item_jumlah'] ?? [];
@@ -69,7 +97,6 @@ if (is_post()) {
         'id_pelanggan' => $idPelanggan,
         'tanggal'      => date('Y-m-d'),
         'diskon'       => $diskon,
-        'uang_bayar'   => $uangBayar,
         'catatan'      => $catatan,
         'items'        => $items
     ]);
@@ -179,14 +206,15 @@ if ($action === 'struk' || $action === 'detail') {
             </div>
 
             <div class="receipt-total-row">
-                <span>Tunai</span>
+                <span><?= ($transaksi['metode_pembayaran'] ?? '') === 'saldo_member' ? 'Saldo kartu member' : 'Tunai' ?></span>
                 <span>Rp<?= number_format($uangBayar, 0, ',', '.') ?></span>
             </div>
-
-            <div class="receipt-total-row">
-                <span>Kembali</span>
-                <span>Rp<?= number_format($uangKembali, 0, ',', '.') ?></span>
-            </div>
+            <?php if (($transaksi['metode_pembayaran'] ?? '') !== 'saldo_member'): ?>
+                <div class="receipt-total-row">
+                    <span>Kembali</span>
+                    <span>Rp<?= number_format($uangKembali, 0, ',', '.') ?></span>
+                </div>
+            <?php endif; ?>
 
             <div style="text-align: right; font-size: 12px; font-weight: 600; margin-top: 2px;">
                 Lunas
@@ -267,7 +295,7 @@ if ($action === 'create') {
         <?= csrf_field() ?>
         <input type="hidden" name="submit_token" value="<?= e($submitToken) ?>">
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+        <div class="pos-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
             
             <!-- Kolom Kiri: Pemilihan Produk & Keranjang -->
             <div class="card">
@@ -275,6 +303,7 @@ if ($action === 'create') {
                     Daftar Produk Belanja
                 </h3>
 
+                <div class="table-responsive pos-table-responsive">
                 <table class="table" id="table-items">
                     <thead>
                         <tr>
@@ -289,6 +318,7 @@ if ($action === 'create') {
                         <!-- Baris akan ditambahkan via JavaScript -->
                     </tbody>
                 </table>
+                </div>
 
                 <div style="margin-top: 15px;">
                     <button type="button" class="btn btn-secondary" id="btn-add-item">+ Tambah Produk Lain</button>
@@ -303,11 +333,17 @@ if ($action === 'create') {
                     </h3>
 
                     <div class="form-group">
+                        <label for="kode_member">Scan Kartu Member</label>
+                        <input type="text" id="kode_member" class="form-control" placeholder="Scan barcode kartu di sini" autocomplete="off">
+                        <small id="member-status" style="color:#6c757d">Scanner barcode biasanya mengisi kolom ini lalu menekan Enter.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="id_pelanggan">Pilih Pelanggan *</label>
                         <select name="id_pelanggan" id="id_pelanggan" class="form-control" required>
                             <option value="">-- Pilih Pelanggan --</option>
                             <?php foreach ($pelangganList as $pel): ?>
-                                <option value="<?= e($pel['id_pelanggan']) ?>">
+                                <option value="<?= e($pel['id_pelanggan']) ?>" data-saldo="<?= e($pel['saldo'] ?? 0) ?>" data-kode="<?= e($pel['kode_member'] ?? '') ?>">
                                     <?= e($pel['nama_pelanggan']) ?> (<?= e($pel['kota']) ?>)
                                 </option>
                             <?php endforeach; ?>
@@ -342,34 +378,18 @@ if ($action === 'create') {
                         </div>
                     </div>
 
-                    <!-- Pembayaran & Hitung Uang Kembalian -->
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 14px; margin-top: 16px;">
-                        <div class="form-group" style="margin-bottom: 8px;">
-                            <label for="uang_bayar" style="font-weight: 700; font-size: 13px; color: var(--text-main);">Uang Tunai Diterima (Rp) *</label>
-                            <input type="number" id="uang_bayar" name="uang_bayar" class="form-control" 
-                                   placeholder="0" min="0" required oninput="calculateKembalian()">
+                    <div class="wallet-payment-box" aria-live="polite">
+                        <div class="wallet-payment-heading">
+                            <span class="wallet-payment-mark" aria-hidden="true">▣</span>
+                            <div><strong>Pembayaran saldo member</strong><small>Saldo dipotong setelah transaksi berhasil.</small></div>
                         </div>
-
-                        <!-- Tombol Cepat Nominal Uang -->
-                        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="setNominalPas()">Uang Pas</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="setNominal(50000)">50.000</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="setNominal(100000)">100.000</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="setNominal(200000)">200.000</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="setNominal(500000)">500.000</button>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
-                            <span style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">Uang Kembalian:</span>
-                            <strong id="display-kembali" style="font-size: 20px; font-weight: 800; color: #1d4ed8;">Rp 0</strong>
-                        </div>
-                        <div id="kembali-warning" style="display: none; color: #dc3545; font-size: 11.5px; margin-top: 4px; font-weight: 600;">
-                            &#9888; Uang pembayaran kurang dari total belanja!
-                        </div>
+                        <div class="wallet-payment-row"><span>Saldo tersedia</span><strong id="display-saldo-member">Pilih kartu member</strong></div>
+                        <div class="wallet-payment-row"><span>Total pembayaran</span><strong id="display-total-member">Rp 0</strong></div>
+                        <p class="wallet-payment-warning" id="saldo-warning" hidden>Saldo member tidak mencukupi. Silakan top-up terlebih dahulu.</p>
                     </div>
 
                     <button type="submit" class="btn btn-primary" id="btn-submit-transaksi" style="width: 100%; margin-top: 20px; padding: 12px; font-size: 15px; font-weight: bold;">
-                        Konfirmasi & Proses Transaksi
+                        Bayar dengan saldo member
                     </button>
                 </div>
             </div>
@@ -377,173 +397,11 @@ if ($action === 'create') {
         </div>
     </form>
 
-    <!-- Data Master Produk JSON untuk Dinamisme Kasir -->
-    <script>
-        const MASTER_PRODUK = <?= json_encode($produkList) ?>;
-        let currentTotalAkhir = 0;
-
-        function formatRupiah(num) {
-            return 'Rp ' + Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        }
-
-        function createRow(index) {
-            let options = '<option value="">-- Pilih Produk --</option>';
-            MASTER_PRODUK.forEach(p => {
-                options += `<option value="${p.id_produk}" data-harga="${p.harga}" data-stok="${p.stok}">
-                    ${p.nama_produk} (Stok: ${p.stok}) - ${formatRupiah(p.harga)}
-                </option>`;
-            });
-
-            return `
-            <tr class="item-row" id="row-${index}">
-                <td>
-                    <select name="item_id_produk[]" class="form-control select-produk" required onchange="onProductSelect(this, ${index})">
-                        ${options}
-                    </select>
-                </td>
-                <td>
-                    <input type="text" class="form-control display-harga" value="Rp 0" disabled>
-                    <input type="hidden" class="input-harga" value="0">
-                </td>
-                <td>
-                    <input type="number" name="item_jumlah[]" class="form-control input-qty" min="1" max="1" value="1" required oninput="calculateTotal()">
-                </td>
-                <td style="text-align: right; vertical-align: middle;">
-                    <strong class="display-subtotal-row">Rp 0</strong>
-                </td>
-                <td style="text-align: center; vertical-align: middle;">
-                    <button type="button" class="btn btn-danger" style="padding: 3px 8px; font-size: 11px;" onclick="removeRow(${index})">&times;</button>
-                </td>
-            </tr>
-            `;
-        }
-
-        let rowIndex = 0;
-        const cartTbody = document.getElementById('cart-rows');
-
-        function addRow() {
-            rowIndex++;
-            cartTbody.insertAdjacentHTML('beforeend', createRow(rowIndex));
-        }
-
-        function removeRow(idx) {
-            const row = document.getElementById(`row-${idx}`);
-            if (row) {
-                row.remove();
-                calculateTotal();
-            }
-        }
-
-        function onProductSelect(selectElem, idx) {
-            const selectedOpt = selectElem.options[selectElem.selectedIndex];
-            const row = document.getElementById(`row-${idx}`);
-            if (!row) return;
-
-            const harga = parseFloat(selectedOpt.getAttribute('data-harga')) || 0;
-            const stok = parseInt(selectedOpt.getAttribute('data-stok')) || 0;
-
-            const hargaDisplay = row.querySelector('.display-harga');
-            const hargaInput = row.querySelector('.input-harga');
-            const qtyInput = row.querySelector('.input-qty');
-
-            hargaDisplay.value = formatRupiah(harga);
-            hargaInput.value = harga;
-            qtyInput.max = stok;
-            if (parseInt(qtyInput.value) > stok) {
-                qtyInput.value = stok;
-            }
-
-            calculateTotal();
-        }
-
-        function calculateTotal() {
-            let subtotal = 0;
-            const rows = document.querySelectorAll('.item-row');
-
-            rows.forEach(r => {
-                const harga = parseFloat(r.querySelector('.input-harga').value) || 0;
-                const qty = parseInt(r.querySelector('.input-qty').value) || 0;
-                const rowSub = harga * qty;
-
-                r.querySelector('.display-subtotal-row').innerText = formatRupiah(rowSub);
-                subtotal += rowSub;
-            });
-
-            const diskonPersen = parseFloat(document.getElementById('diskon').value) || 0;
-            const diskonRp = (subtotal * diskonPersen) / 100;
-            currentTotalAkhir = Math.max(0, subtotal - diskonRp);
-
-            document.getElementById('display-subtotal').innerText = formatRupiah(subtotal);
-            document.getElementById('display-diskon').innerText = '- ' + formatRupiah(diskonRp);
-            document.getElementById('display-total').innerText = formatRupiah(currentTotalAkhir);
-
-            calculateKembalian();
-        }
-
-        function calculateKembalian() {
-            const bayarInput = document.getElementById('uang_bayar');
-            const bayarVal = bayarInput.value.trim();
-            const displayKembali = document.getElementById('display-kembali');
-            const warning = document.getElementById('kembali-warning');
-
-            if (bayarVal === '') {
-                displayKembali.innerText = 'Rp 0';
-                displayKembali.style.color = '#1d4ed8';
-                warning.style.display = 'none';
-                return;
-            }
-
-            const bayar = parseFloat(bayarVal) || 0;
-            const kembali = bayar - currentTotalAkhir;
-
-            if (kembali < 0) {
-                displayKembali.innerText = '- ' + formatRupiah(Math.abs(kembali));
-                displayKembali.style.color = '#dc3545';
-                warning.style.display = 'block';
-            } else {
-                displayKembali.innerText = formatRupiah(kembali);
-                displayKembali.style.color = '#1d4ed8';
-                warning.style.display = 'none';
-            }
-        }
-
-        function setNominalPas() {
-            document.getElementById('uang_bayar').value = currentTotalAkhir;
-            calculateKembalian();
-        }
-
-        function setNominal(amount) {
-            document.getElementById('uang_bayar').value = amount;
-            calculateKembalian();
-        }
-
-        document.getElementById('btn-add-item').addEventListener('click', addRow);
-        document.getElementById('diskon').addEventListener('input', calculateTotal);
-
-        // Tambah 1 baris awal secara otomatis
-        addRow();
-
-        // Validasi dan Pencegahan Double Submit di Sisi Tombol
-        document.getElementById('form-transaksi').addEventListener('submit', function(e) {
-            const rows = document.querySelectorAll('.item-row');
-            if (rows.length === 0) {
-                alert('Pilih minimal satu produk untuk transaksi.');
-                e.preventDefault();
-                return;
-            }
-
-            const bayarVal = parseFloat(document.getElementById('uang_bayar').value) || 0;
-            if (bayarVal < currentTotalAkhir) {
-                alert('Uang pembayaran kurang Rp ' + Math.round(currentTotalAkhir - bayarVal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '. Transaksi tidak dapat dilanjutkan.');
-                e.preventDefault();
-                return;
-            }
-
-            const btn = document.getElementById('btn-submit-transaksi');
-            btn.disabled = true;
-            btn.innerText = 'Memproses Transaksi...';
-        });
-    </script>
+    <script type="application/json" id="pos-data"><?= json_encode(
+        ['products' => $produkList],
+        JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR
+    ) ?></script>
+    <script src="assets/js/pos.js?v=<?= APP_VERSION ?>" defer></script>
     <?php
     require_once dirname(dirname(__DIR__)) . '/templates/footer.php';
     exit;

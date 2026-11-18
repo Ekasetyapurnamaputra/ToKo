@@ -8,6 +8,7 @@
 
 require_once dirname(__DIR__) . '/core/Database.php';
 require_once dirname(__DIR__) . '/core/Logger.php';
+require_once dirname(__DIR__) . '/core/Auth.php';
 require_once dirname(__DIR__) . '/helpers/security_helper.php';
 require_once dirname(__DIR__) . '/models/Pelanggan.php';
 require_once dirname(__DIR__) . '/models/Produk.php';
@@ -199,22 +200,24 @@ class Transaksi
                 throw new \Exception("Total belanja tidak boleh bernilai negatif.");
             }
 
-            // Hitung Uang Pembayaran (Tunai) dan Uang Kembalian
-            $uangBayar = (float)($data['uang_bayar'] ?? 0);
-            if ($uangBayar <= 0) {
-                $uangBayar = $totalAkhir; // Default uang pas
+            $memberBalance = $db->fetchOne(
+                'SELECT saldo FROM tbl_pelanggan WHERE id_pelanggan = :id FOR UPDATE',
+                [':id' => $idPelanggan]
+            );
+            if (!$memberBalance) {
+                throw new \RuntimeException('Data member tidak ditemukan saat pembayaran.');
             }
 
-            if ($uangBayar < $totalAkhir) {
-                $kurang = number_format($totalAkhir - $uangBayar, 0, ',', '.');
-                throw new \Exception("Uang pembayaran kurang Rp {$kurang}. Total belanja: Rp " . number_format($totalAkhir, 0, ',', '.') . ", Diterima: Rp " . number_format($uangBayar, 0, ',', '.'));
+            $balanceBefore = (float)$memberBalance['saldo'];
+            if ($balanceBefore < $totalAkhir) {
+                $kurang = number_format($totalAkhir - $balanceBefore, 0, ',', '.');
+                throw new \RuntimeException("Saldo member kurang Rp {$kurang}. Silakan lakukan top-up terlebih dahulu.");
             }
-
-            $uangKembali = round($uangBayar - $totalAkhir, 2);
+            $balanceAfter = round($balanceBefore - $totalAkhir, 2);
 
             // 1. Simpan Header Transaksi ke tbl_transaksi
-            $sqlHeader = "INSERT INTO tbl_transaksi (tanggal, id_pelanggan, subtotal, diskon, nilai_diskon, total_belanja, uang_bayar, uang_kembali, catatan) 
-                          VALUES (:tanggal, :id_pelanggan, :subtotal, :diskon, :nilai_diskon, :total_belanja, :uang_bayar, :uang_kembali, :catatan)";
+            $sqlHeader = "INSERT INTO tbl_transaksi (tanggal, id_pelanggan, subtotal, diskon, nilai_diskon, total_belanja, uang_bayar, uang_kembali, metode_pembayaran, catatan)
+                          VALUES (:tanggal, :id_pelanggan, :subtotal, :diskon, :nilai_diskon, :total_belanja, :uang_bayar, 0, 'saldo_member', :catatan)";
             
             $db->execute($sqlHeader, [
                 ':tanggal'       => $tanggal,
@@ -223,12 +226,29 @@ class Transaksi
                 ':diskon'        => $diskonPersen,
                 ':nilai_diskon'  => $nilaiDiskon,
                 ':total_belanja' => $totalAkhir,
-                ':uang_bayar'    => $uangBayar,
-                ':uang_kembali'  => $uangKembali,
+                ':uang_bayar'    => $totalAkhir,
                 ':catatan'       => !empty($catatan) ? $catatan : null
             ]);
 
             $idTransaksi = (int)$db->lastInsertId();
+            $db->execute(
+                'UPDATE tbl_pelanggan SET saldo = :saldo WHERE id_pelanggan = :id',
+                [':saldo' => number_format($balanceAfter, 2, '.', ''), ':id' => $idPelanggan]
+            );
+            $db->execute(
+                "INSERT INTO tbl_mutasi_saldo
+                 (id_pelanggan, id_transaksi, jenis, nominal, saldo_sebelum, saldo_sesudah, id_user, keterangan)
+                 VALUES (:member_id, :transaction_id, 'pembelian', :nominal, :before, :after, :user_id, :description)",
+                [
+                    ':member_id' => $idPelanggan,
+                    ':transaction_id' => $idTransaksi,
+                    ':nominal' => number_format($totalAkhir, 2, '.', ''),
+                    ':before' => number_format($balanceBefore, 2, '.', ''),
+                    ':after' => number_format($balanceAfter, 2, '.', ''),
+                    ':user_id' => Auth::id(),
+                    ':description' => "Pembayaran transaksi #{$idTransaksi}"
+                ]
+            );
 
             // 2. Simpan Setiap Detail Transaksi & Kurangi Stok Produk
             $sqlDetail = "INSERT INTO tbl_detail_transaksi (id_transaksi, id_produk, nama_produk, jumlah, harga, subtotal) 

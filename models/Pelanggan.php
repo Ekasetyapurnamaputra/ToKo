@@ -17,19 +17,21 @@ class Pelanggan
     {
         $db = Database::getInstance();
         if (!empty($keyword)) {
-            $sql = "SELECT p.id_pelanggan, p.nama_pelanggan, p.kota,
+            $sql = "SELECT p.id_pelanggan, p.nama_pelanggan, p.kota, p.kode_member, p.saldo,
+                           (SELECT u.username FROM tbl_user u WHERE u.id_pelanggan = p.id_pelanggan LIMIT 1) AS username_akun,
                            COUNT(t.id_transaksi) AS total_transaksi,
                            COALESCE(SUM(t.total_belanja), 0) AS total_belanja
                     FROM tbl_pelanggan p
                     LEFT JOIN tbl_transaksi t ON p.id_pelanggan = t.id_pelanggan
                     WHERE p.nama_pelanggan LIKE :kw1 OR p.kota LIKE :kw2
-                    GROUP BY p.id_pelanggan, p.nama_pelanggan, p.kota
+                    GROUP BY p.id_pelanggan, p.nama_pelanggan, p.kota, p.kode_member, p.saldo
                     ORDER BY p.id_pelanggan DESC";
             return $db->fetchAll($sql, [':kw1' => "%{$keyword}%", ':kw2' => "%{$keyword}%"]);
         }
 
         // Jika tanpa pencarian, manfaatkan VIEW view_total_belanja
-        $sql = "SELECT v.*, p.kota 
+        $sql = "SELECT v.*, p.kota, p.kode_member, p.saldo,
+                       (SELECT u.username FROM tbl_user u WHERE u.id_pelanggan = p.id_pelanggan LIMIT 1) AS username_akun
                 FROM view_total_belanja v
                 JOIN tbl_pelanggan p ON v.id_pelanggan = p.id_pelanggan
                 ORDER BY v.id_pelanggan DESC";
@@ -43,8 +45,28 @@ class Pelanggan
     public static function getById(int $id): ?array
     {
         $db = Database::getInstance();
-        // Memanggil Stored Procedure CariPelanggan
-        return $db->fetchOne("CALL CariPelanggan(:id)", [':id' => $id]);
+        return $db->fetchOne("SELECT * FROM tbl_pelanggan WHERE id_pelanggan = :id", [':id' => $id]);
+    }
+
+    public static function getByMemberCode(string $kode): ?array
+    {
+        return Database::getInstance()->fetchOne(
+            "SELECT * FROM tbl_pelanggan WHERE kode_member = :kode", [':kode' => trim($kode)]
+        );
+    }
+
+    /** Kartu member memakai nomor stabil MEM + ID pelanggan. */
+    public static function getByCard(string $card): ?array
+    {
+        if (!preg_match('/^MEM(\\d+)$/i', trim($card), $match)) {
+            return null;
+        }
+        return self::getById((int)$match[1]);
+    }
+
+    public static function cardNumber(int $id): string
+    {
+        return 'MEM' . str_pad((string)$id, 6, '0', STR_PAD_LEFT);
     }
 
     /**

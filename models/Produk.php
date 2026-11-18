@@ -19,9 +19,10 @@ class Produk
         $params = [];
 
         if (!empty($keyword)) {
-            $conditions[] = "(p.nama_produk LIKE :kw1 OR p.kode_produk LIKE :kw2)";
+            $conditions[] = "(p.nama_produk LIKE :kw1 OR p.kode_produk LIKE :kw2 OR p.barcode_pabrik LIKE :kw3)";
             $params[':kw1'] = "%{$keyword}%";
             $params[':kw2'] = "%{$keyword}%";
+            $params[':kw3'] = "%{$keyword}%";
         }
 
         if (!empty($kategoriId)) {
@@ -59,6 +60,26 @@ class Produk
     }
 
     /**
+     * Mencari produk berdasarkan Barcode Pabrik atau Kode Produk
+     */
+    public static function findByBarcodeOrKode(string $code): ?array
+    {
+        $code = trim($code);
+        if (empty($code)) {
+            return null;
+        }
+
+        $db = Database::getInstance();
+        $sql = "SELECT p.*, k.nama_kategori 
+                FROM tbl_produk p
+                LEFT JOIN tbl_kategori k ON p.id_kategori = k.id_kategori
+                WHERE p.kode_produk = :c1 OR (p.barcode_pabrik IS NOT NULL AND p.barcode_pabrik = :c2)
+                LIMIT 1";
+
+        return $db->fetchOne($sql, [':c1' => $code, ':c2' => $code]);
+    }
+
+    /**
      * Menghasilkan kode produk baru secara otomatis (Contoh: PRD-006)
      */
     public static function generateKode(): string
@@ -87,16 +108,21 @@ class Produk
             return ['success' => false, 'message' => "Kode produk '{$kode}' sudah digunakan oleh produk lain."];
         }
 
-        $sql = "INSERT INTO tbl_produk (kode_produk, nama_produk, id_kategori, harga, stok, status) 
-                VALUES (:kode, :nama, :kategori, :harga, :stok, :status)";
+        $barcodePabrik = !empty($data['barcode_pabrik']) ? trim($data['barcode_pabrik']) : null;
+        $hargaBeli     = isset($data['harga_beli']) ? (float)$data['harga_beli'] : 0.00;
+
+        $sql = "INSERT INTO tbl_produk (kode_produk, barcode_pabrik, nama_produk, id_kategori, harga, harga_beli, stok, status) 
+                VALUES (:kode, :barcode, :nama, :kategori, :harga, :harga_beli, :stok, :status)";
 
         $db->execute($sql, [
-            ':kode'     => $kode,
-            ':nama'     => trim($data['nama_produk']),
-            ':kategori' => !empty($data['id_kategori']) ? (int)$data['id_kategori'] : null,
-            ':harga'    => (float)$data['harga'],
-            ':stok'     => (int)$data['stok'],
-            ':status'   => in_array($data['status'] ?? '', ['aktif', 'nonaktif']) ? $data['status'] : 'aktif'
+            ':kode'       => $kode,
+            ':barcode'    => $barcodePabrik,
+            ':nama'       => trim($data['nama_produk']),
+            ':kategori'   => !empty($data['id_kategori']) ? (int)$data['id_kategori'] : null,
+            ':harga'      => (float)$data['harga'],
+            ':harga_beli' => $hargaBeli,
+            ':stok'       => (int)$data['stok'],
+            ':status'     => in_array($data['status'] ?? '', ['aktif', 'nonaktif']) ? $data['status'] : 'aktif'
         ]);
 
         $newId = $db->lastInsertId();
@@ -129,23 +155,30 @@ class Produk
             }
         }
 
+        $barcodePabrik = array_key_exists('barcode_pabrik', $data) ? (!empty($data['barcode_pabrik']) ? trim($data['barcode_pabrik']) : null) : ($produk['barcode_pabrik'] ?? null);
+        $hargaBeli     = array_key_exists('harga_beli', $data) ? (float)$data['harga_beli'] : (float)($produk['harga_beli'] ?? 0);
+
         $sql = "UPDATE tbl_produk SET 
-                    kode_produk = :kode,
-                    nama_produk = :nama,
-                    id_kategori = :kategori,
-                    harga       = :harga,
-                    stok        = :stok,
-                    status      = :status
+                    kode_produk    = :kode,
+                    barcode_pabrik = :barcode,
+                    nama_produk    = :nama,
+                    id_kategori    = :kategori,
+                    harga          = :harga,
+                    harga_beli     = :harga_beli,
+                    stok           = :stok,
+                    status         = :status
                 WHERE id_produk = :id";
 
         $db->execute($sql, [
-            ':kode'     => $kode,
-            ':nama'     => trim($data['nama_produk']),
-            ':kategori' => !empty($data['id_kategori']) ? (int)$data['id_kategori'] : null,
-            ':harga'    => (float)$data['harga'],
-            ':stok'     => (int)$data['stok'],
-            ':status'   => in_array($data['status'] ?? '', ['aktif', 'nonaktif']) ? $data['status'] : 'aktif',
-            ':id'       => $id
+            ':kode'       => $kode,
+            ':barcode'    => $barcodePabrik,
+            ':nama'       => trim($data['nama_produk']),
+            ':kategori'   => !empty($data['id_kategori']) ? (int)$data['id_kategori'] : null,
+            ':harga'      => (float)$data['harga'],
+            ':harga_beli' => $hargaBeli,
+            ':stok'       => (int)$data['stok'],
+            ':status'     => in_array($data['status'] ?? '', ['aktif', 'nonaktif']) ? $data['status'] : 'aktif',
+            ':id'         => $id
         ]);
 
         Logger::log('PRODUK_UBAH', "Memperbarui produk ID #{$id} ({$data['nama_produk']}): Harga baru Rp {$data['harga']}, Stok: {$data['stok']}, Status: {$data['status']}");

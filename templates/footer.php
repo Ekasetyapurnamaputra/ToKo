@@ -26,5 +26,6 @@ if (Auth::check()):
 <?php endif; ?>
 
 <script src="assets/js/app.js?v=<?= APP_VERSION ?>"></script>
+<script src="assets/js/react-ui.js?v=<?= APP_VERSION ?>"></script>
 </body>
 </html>

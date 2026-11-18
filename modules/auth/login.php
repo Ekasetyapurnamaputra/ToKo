@@ -13,7 +13,7 @@ Session::start();
 
 // Jika sudah login, langsung alihkan ke dashboard
 if (Auth::check()) {
-    header('Location: index.php?page=dashboard');
+    header('Location: ' . Auth::dashboardUrl());
     exit;
 }
 
@@ -36,7 +36,7 @@ if (is_post()) {
             $loginResult = Auth::login($username, $password);
             if ($loginResult['success']) {
                 Session::setFlash('success', 'Selamat datang kembali, ' . Auth::user()['nama_lengkap'] . '!');
-                header('Location: index.php?page=dashboard');
+                header('Location: ' . Auth::dashboardUrl());
                 exit;
             } else {
                 $error = $loginResult['message'];
@@ -159,6 +159,9 @@ $pageTitle = 'Login Pengguna';
                 Masuk ke Sistem
             </button>
         </form>
+
+            <p class="auth-switch">Belum menjadi member? <a href="index.php?page=register">Daftar akun member</a></p>
+            <a class="auth-home-link" href="index.php?page=home">← Kembali ke beranda</a>
 
         <div style="margin-top: 24px; padding-top: 18px; border-top: 1px dashed #e2e8f0; font-size: 12px; color: #64748b;">
             <div style="font-weight: 700; color: #334155; margin-bottom: 6px;">Akun Cepat (Klik untuk Mengisi):</div>

@@ -21,20 +21,26 @@ $page = $_GET['page'] ?? '';
 // Jika tidak ada parameter page, arahkan sesuai status login
 if (empty($page)) {
     if (Auth::check()) {
-        $page = 'dashboard';
+        $page = Auth::hasRole('pelanggan') ? 'member' : 'dashboard';
     } else {
-        $page = 'login';
+        $page = 'home';
     }
 }
 
 // Peta Routing Modul Aplikasi
 $routes = [
     'login'     => __DIR__ . '/modules/auth/login.php',
+    'register'  => __DIR__ . '/modules/auth/register.php',
+    'home'      => __DIR__ . '/modules/home/index.php',
     'logout'    => __DIR__ . '/modules/auth/logout.php',
     'dashboard' => __DIR__ . '/modules/dashboard/index.php',
+    'member'     => __DIR__ . '/modules/member/index.php',
+    'katalog'    => __DIR__ . '/modules/katalog/index.php',
+    'topup'      => __DIR__ . '/modules/topup/index.php',
     'pelanggan' => __DIR__ . '/modules/pelanggan/index.php',
-    'produk'    => __DIR__ . '/modules/produk/index.php',
-    'kategori'  => __DIR__ . '/modules/kategori/index.php',
+    'produk'     => __DIR__ . '/modules/produk/index.php',
+    'scan_pabrik'=> __DIR__ . '/modules/scan_pabrik/index.php',
+    'kategori'   => __DIR__ . '/modules/kategori/index.php',
     'transaksi' => __DIR__ . '/modules/transaksi/index.php',
     'laporan'   => __DIR__ . '/modules/laporan/index.php',
     'log'       => __DIR__ . '/modules/log/index.php',

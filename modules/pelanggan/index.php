@@ -8,10 +8,12 @@ require_once dirname(dirname(__DIR__)) . '/config/app.php';
 require_once dirname(dirname(__DIR__)) . '/core/Session.php';
 require_once dirname(dirname(__DIR__)) . '/core/Auth.php';
 require_once dirname(dirname(__DIR__)) . '/models/Pelanggan.php';
+require_once dirname(dirname(__DIR__)) . '/models/MemberAccount.php';
+require_once dirname(dirname(__DIR__)) . '/core/Database.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/security_helper.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/format_helper.php';
 
-Auth::requireLogin();
+Auth::requireRole(['admin', 'kasir']);
 
 $action = $_GET['action'] ?? 'list';
 $error = '';
@@ -29,16 +31,31 @@ if (is_post()) {
 
     $postAction = $_POST['post_action'] ?? '';
 
+    if ($postAction === 'create_account') {
+        Auth::requireRole('admin');
+        $id = (int)($_POST['id_pelanggan'] ?? 0);
+        $result = MemberAccount::createForMember(
+            $id,
+            clean($_POST['username'] ?? ''),
+            $_POST['password'] ?? ''
+        );
+        Session::setFlash($result['success'] ? 'success' : 'danger', $result['message']);
+        header('Location: index.php?page=pelanggan');
+        exit;
+    }
+
     // Tambah Pelanggan
     if ($postAction === 'create') {
         $nama = clean($_POST['nama_pelanggan'] ?? '');
         $kota = clean($_POST['kota'] ?? '');
+        $kodeMember = clean($_POST['kode_member'] ?? '') ?: 'MEM-' . strtoupper(bin2hex(random_bytes(4)));
 
         if (empty($nama) || empty($kota)) {
             $error = 'Nama pelanggan dan kota wajib diisi.';
         } else {
             // Memanggil Stored Procedure TambahPelanggan (dan memicu trigger after_insert_pelanggan)
             Pelanggan::create($nama, $kota);
+            Database::getInstance()->execute("UPDATE tbl_pelanggan SET kode_member = :kode WHERE nama_pelanggan = :nama AND kota = :kota ORDER BY id_pelanggan DESC LIMIT 1", [':kode' => $kodeMember, ':nama' => $nama, ':kota' => $kota]);
             Session::setFlash('success', "Pelanggan '{$nama}' berhasil ditambahkan (dicatat ke log_pelanggan oleh Trigger database).");
             header('Location: index.php?page=pelanggan');
             exit;
@@ -50,12 +67,14 @@ if (is_post()) {
         $id   = (int)($_POST['id_pelanggan'] ?? 0);
         $nama = clean($_POST['nama_pelanggan'] ?? '');
         $kota = clean($_POST['kota'] ?? '');
+        $kodeMember = clean($_POST['kode_member'] ?? '') ?: 'MEM-' . strtoupper(bin2hex(random_bytes(4)));
 
         if ($id <= 0 || empty($nama) || empty($kota)) {
             $error = 'Data yang dikirim tidak lengkap.';
         } else {
             // Memperbarui pelanggan (memicu trigger after_update_pelanggan ke log_perubahan_pelanggan)
             Pelanggan::update($id, $nama, $kota);
+            Database::getInstance()->execute("UPDATE tbl_pelanggan SET kode_member = :kode WHERE id_pelanggan = :id", [':kode' => $kodeMember, ':id' => $id]);
             Session::setFlash('success', "Data pelanggan ID #{$id} berhasil diperbarui (perubahan dicatat oleh Trigger database).");
             header('Location: index.php?page=pelanggan');
             exit;
@@ -79,6 +98,59 @@ if (is_post()) {
 // ====================================================================
 // 2. TAMPILAN SESUAI ACTION
 // ====================================================================
+
+if ($action === 'akun') {
+    Auth::requireRole('admin');
+    $id = (int)($_GET['id'] ?? 0);
+    $pelanggan = Pelanggan::getById($id);
+    if (!$pelanggan) {
+        Session::setFlash('danger', 'Pelanggan tidak ditemukan.');
+        header('Location: index.php?page=pelanggan');
+        exit;
+    }
+    $account = \Database::getInstance()->fetchOne(
+        'SELECT username FROM tbl_user WHERE id_pelanggan = :id LIMIT 1',
+        [':id' => $id]
+    );
+    if ($account) {
+        Session::setFlash('info', 'Member ini sudah memiliki akun: ' . $account['username']);
+        header('Location: index.php?page=pelanggan');
+        exit;
+    }
+
+    $pageTitle = 'Buat Akun Member';
+    require_once dirname(dirname(__DIR__)) . '/templates/header.php';
+    ?>
+    <div class="page-intro">
+        <div>
+            <h2>Buat akun member</h2>
+            <p>Akun akan terhubung ke kartu <?= e($pelanggan['kode_member'] ?? '-') ?> milik <?= e($pelanggan['nama_pelanggan']) ?>.</p>
+        </div>
+    </div>
+    <div class="card member-account-form">
+        <form method="POST" action="index.php?page=pelanggan">
+            <?= csrf_field() ?>
+            <input type="hidden" name="post_action" value="create_account">
+            <input type="hidden" name="id_pelanggan" value="<?= e($pelanggan['id_pelanggan']) ?>">
+            <div class="form-group">
+                <label for="username">Username member</label>
+                <input class="form-control" id="username" name="username" minlength="3" maxlength="50" pattern="[A-Za-z0-9._-]{3,50}" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="password">Kata sandi awal</label>
+                <input class="form-control" type="password" id="password" name="password" minlength="8" required autocomplete="new-password">
+                <small class="auth-hint">Berikan kata sandi secara aman dan minta member menggantinya setelah masuk.</small>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" type="submit">Buat akun</button>
+                <a class="btn btn-secondary" href="index.php?page=pelanggan">Batal</a>
+            </div>
+        </form>
+    </div>
+    <?php
+    require_once dirname(dirname(__DIR__)) . '/templates/footer.php';
+    exit;
+}
 
 // A. Riwayat Transaksi Pelanggan (Memanfaatkan Stored Procedure LaporanTransaksi)
 if ($action === 'riwayat') {
@@ -178,6 +250,12 @@ if ($action === 'create' || $action === 'edit') {
                 </div>
 
                 <div class="form-group">
+                    <label for="kode_member">Kode Kartu Member</label>
+                    <input type="text" id="kode_member" name="kode_member" class="form-control" value="<?= e($pelanggan['kode_member'] ?? '') ?>" placeholder="Scan kartu member di sini" autocomplete="off">
+                    <small style="color:#6c757d">Arahkan scanner ke kolom ini. Kode kartu akan langsung muncul setelah scan.</small>
+                </div>
+
+                <div class="form-group">
                     <label for="kota">Kota / Asal *</label>
                     <input type="text" id="kota" name="kota" class="form-control" 
                            value="<?= e($pelanggan['kota'] ?? '') ?>" required placeholder="Contoh: Ponorogo, Madiun">
@@ -190,6 +268,15 @@ if ($action === 'create' || $action === 'edit') {
             </form>
         </div>
     </div>
+    <script>
+        const kartuMember = document.getElementById('kode_member');
+        if (kartuMember) {
+            kartuMember.focus();
+            kartuMember.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') event.preventDefault();
+            });
+        }
+    </script>
     <?php
     require_once dirname(dirname(__DIR__)) . '/templates/footer.php';
     exit;
@@ -231,7 +318,9 @@ require_once dirname(dirname(__DIR__)) . '/templates/header.php';
                 <tr>
                     <th style="width: 60px;">ID</th>
                     <th>Nama Pelanggan</th>
+                    <th>Kartu Member</th>
                     <th>Kota</th>
+                    <th>Akun member</th>
                     <th style="width: 140px; text-align: center;">Total Transaksi</th>
                     <th style="width: 170px; text-align: right;">Akumulasi Belanja</th>
                     <th style="width: 220px; text-align: center;">Aksi</th>
@@ -240,7 +329,7 @@ require_once dirname(dirname(__DIR__)) . '/templates/header.php';
             <tbody>
                 <?php if (empty($pelangganList)): ?>
                     <tr>
-                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">
                             <?= !empty($keyword) ? 'Tidak ada pelanggan yang cocok dengan kata kunci pencarian.' : 'Belum ada data pelanggan.' ?>
                         </td>
                     </tr>
@@ -249,7 +338,17 @@ require_once dirname(dirname(__DIR__)) . '/templates/header.php';
                         <tr>
                             <td><strong>#<?= e($p['id_pelanggan']) ?></strong></td>
                             <td><strong><?= e($p['nama_pelanggan']) ?></strong></td>
+                            <td><code><?= e($p['kode_member'] ?? '-') ?></code></td>
                             <td><?= e($p['kota']) ?></td>
+                            <td>
+                                <?php if (!empty($p['username_akun'])): ?>
+                                    <span class="badge badge-success"><?= e($p['username_akun']) ?></span>
+                                <?php elseif (Auth::hasRole('admin')): ?>
+                                    <a class="btn btn-secondary btn-sm" href="index.php?page=pelanggan&action=akun&id=<?= e($p['id_pelanggan']) ?>">Buat akun</a>
+                                <?php else: ?>
+                                    <span class="badge badge-secondary">Belum aktif</span>
+                                <?php endif; ?>
+                            </td>
                             <td style="text-align: center;">
                                 <?php if ((int)$p['total_transaksi'] > 0): ?>
                                     <span class="badge badge-info"><?= e($p['total_transaksi']) ?> transaksi</span>

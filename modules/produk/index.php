@@ -12,7 +12,12 @@ require_once dirname(dirname(__DIR__)) . '/models/Kategori.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/security_helper.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/format_helper.php';
 
-Auth::requireLogin();
+if (Auth::hasRole('pelanggan')) {
+    header('Location: index.php?page=katalog');
+    exit;
+}
+
+Auth::requireRole(['admin', 'kasir']);
 
 $action = $_GET['action'] ?? 'list';
 $error = '';
@@ -32,23 +37,27 @@ if (is_post()) {
 
     // Tambah Produk
     if ($postAction === 'create') {
-        $nama     = clean($_POST['nama_produk'] ?? '');
-        $kode     = clean($_POST['kode_produk'] ?? '');
-        $kategori = (int)($_POST['id_kategori'] ?? 0);
-        $harga    = (float)($_POST['harga'] ?? 0);
-        $stok     = (int)($_POST['stok'] ?? 0);
-        $status   = clean($_POST['status'] ?? 'aktif');
+        $nama          = clean($_POST['nama_produk'] ?? '');
+        $kode          = clean($_POST['kode_produk'] ?? '');
+        $barcodePabrik = clean($_POST['barcode_pabrik'] ?? '');
+        $kategori      = (int)($_POST['id_kategori'] ?? 0);
+        $harga         = (float)($_POST['harga'] ?? 0);
+        $hargaBeli     = (float)($_POST['harga_beli'] ?? 0);
+        $stok          = (int)($_POST['stok'] ?? 0);
+        $status        = clean($_POST['status'] ?? 'aktif');
 
-        if (empty($nama) || $harga < 0 || $stok < 0) {
+        if (empty($nama) || $harga < 0 || $stok < 0 || $hargaBeli < 0) {
             $error = 'Nama produk wajib diisi, serta harga dan stok tidak boleh bernilai negatif.';
         } else {
             $res = Produk::create([
-                'kode_produk' => $kode,
-                'nama_produk' => $nama,
-                'id_kategori' => $kategori > 0 ? $kategori : null,
-                'harga'       => $harga,
-                'stok'        => $stok,
-                'status'      => $status
+                'kode_produk'    => $kode,
+                'barcode_pabrik' => $barcodePabrik,
+                'nama_produk'    => $nama,
+                'id_kategori'    => $kategori > 0 ? $kategori : null,
+                'harga'          => $harga,
+                'harga_beli'     => $hargaBeli,
+                'stok'           => $stok,
+                'status'         => $status
             ]);
 
             if ($res['success']) {
@@ -63,24 +72,28 @@ if (is_post()) {
 
     // Ubah Produk
     if ($postAction === 'edit') {
-        $id       = (int)($_POST['id_produk'] ?? 0);
-        $nama     = clean($_POST['nama_produk'] ?? '');
-        $kode     = clean($_POST['kode_produk'] ?? '');
-        $kategori = (int)($_POST['id_kategori'] ?? 0);
-        $harga    = (float)($_POST['harga'] ?? 0);
-        $stok     = (int)($_POST['stok'] ?? 0);
-        $status   = clean($_POST['status'] ?? 'aktif');
+        $id            = (int)($_POST['id_produk'] ?? 0);
+        $nama          = clean($_POST['nama_produk'] ?? '');
+        $kode          = clean($_POST['kode_produk'] ?? '');
+        $barcodePabrik = clean($_POST['barcode_pabrik'] ?? '');
+        $kategori      = (int)($_POST['id_kategori'] ?? 0);
+        $harga         = (float)($_POST['harga'] ?? 0);
+        $hargaBeli     = (float)($_POST['harga_beli'] ?? 0);
+        $stok          = (int)($_POST['stok'] ?? 0);
+        $status        = clean($_POST['status'] ?? 'aktif');
 
-        if ($id <= 0 || empty($nama) || $harga < 0 || $stok < 0) {
+        if ($id <= 0 || empty($nama) || $harga < 0 || $stok < 0 || $hargaBeli < 0) {
             $error = 'Nama produk wajib diisi, serta harga dan stok tidak boleh bernilai negatif.';
         } else {
             $res = Produk::update($id, [
-                'kode_produk' => $kode,
-                'nama_produk' => $nama,
-                'id_kategori' => $kategori > 0 ? $kategori : null,
-                'harga'       => $harga,
-                'stok'        => $stok,
-                'status'      => $status
+                'kode_produk'    => $kode,
+                'barcode_pabrik' => $barcodePabrik,
+                'nama_produk'    => $nama,
+                'id_kategori'    => $kategori > 0 ? $kategori : null,
+                'harga'          => $harga,
+                'harga_beli'     => $hargaBeli,
+                'stok'           => $stok,
+                'status'         => $status
             ]);
 
             if ($res['success']) {
@@ -208,7 +221,7 @@ if ($action === 'create' || $action === 'edit') {
                     <input type="hidden" name="id_produk" value="<?= e($produk['id_produk']) ?>">
                 <?php endif; ?>
 
-                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label for="kode_produk">Kode Produk *</label>
                         <input type="text" id="kode_produk" name="kode_produk" class="form-control" 
@@ -216,10 +229,16 @@ if ($action === 'create' || $action === 'edit') {
                     </div>
 
                     <div class="form-group">
-                        <label for="nama_produk">Nama Produk *</label>
-                        <input type="text" id="nama_produk" name="nama_produk" class="form-control" 
-                               value="<?= e($produk['nama_produk'] ?? '') ?>" required autofocus>
+                        <label for="barcode_pabrik">Barcode Pabrik (EAN/UPC)</label>
+                        <input type="text" id="barcode_pabrik" name="barcode_pabrik" class="form-control" 
+                               value="<?= e($produk['barcode_pabrik'] ?? '') ?>" placeholder="Scan atau ketik barcode kemasan">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="nama_produk">Nama Produk *</label>
+                    <input type="text" id="nama_produk" name="nama_produk" class="form-control" 
+                           value="<?= e($produk['nama_produk'] ?? '') ?>" required autofocus>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -245,7 +264,13 @@ if ($action === 'create' || $action === 'edit') {
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label for="harga_beli">Harga Beli Pabrik (Rp)</label>
+                        <input type="number" id="harga_beli" name="harga_beli" class="form-control" 
+                               min="0" step="100" value="<?= e($produk['harga_beli'] ?? 0) ?>">
+                    </div>
+
                     <div class="form-group">
                         <label for="harga">Harga Jual (Rp) *</label>
                         <input type="number" id="harga" name="harga" class="form-control" 
@@ -291,12 +316,16 @@ $pageTitle = 'Manajemen Produk';
 require_once dirname(dirname(__DIR__)) . '/templates/header.php';
 ?>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
     <div>
         <h2 style="margin: 0;">Manajemen Produk & Stok</h2>
         <p style="margin: 3px 0 0 0; color: #6c757d; font-size: 13px;">Kelola katalog produk, harga jual, stok gudang, dan pengelompokan kategori.</p>
     </div>
-    <div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="index.php?page=scan_pabrik" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+            <span>Scan Produk Pabrik</span>
+        </a>
         <a href="index.php?page=produk&action=create" class="btn btn-primary">+ Tambah Produk</a>
     </div>
 </div>
@@ -329,6 +358,53 @@ require_once dirname(dirname(__DIR__)) . '/templates/header.php';
             <a href="index.php?page=produk" class="btn btn-secondary">Reset</a>
         <?php endif; ?>
     </form>
+
+    <div class="product-grid" aria-label="Daftar produk dalam bentuk kartu">
+        <?php if (empty($produkList)): ?>
+            <div class="product-empty">Tidak ada produk untuk ditampilkan.</div>
+        <?php else: ?>
+            <?php foreach ($produkList as $p): ?>
+                <?php
+                    $stok = (int)$p['stok'];
+                    $stockClass = $stok <= 0 ? 'stock-critical' : ($stok <= 5 ? 'stock-low' : 'stock-ok');
+                    $stockLabel = $stok <= 0 ? 'Habis' : ($stok <= 5 ? 'Rendah' : 'Aman');
+                ?>
+                <article class="product-card" tabindex="0" role="button" aria-label="Produk <?= e($p['nama_produk']) ?>, harga <?= format_rupiah($p['harga']) ?>, stok <?= $stok ?> unit" data-id="<?= e($p['id_produk']) ?>">
+                    <button type="button" class="quick-add" title="Tambah ke keranjang" aria-label="Tambah <?= e($p['nama_produk']) ?> ke keranjang" data-id="<?= (int)$p['id_produk'] ?>" onclick="ToKo.addToCart(<?= (int)$p['id_produk'] ?>)">+</button>
+                    <div class="product-card-top">
+                        <span class="product-icon" aria-hidden="true">📦</span>
+                        <span class="badge <?= $p['status'] === 'aktif' ? 'badge-success' : 'badge-danger' ?>">
+                            <?= $p['status'] === 'aktif' ? 'Aktif' : 'Nonaktif' ?>
+                        </span>
+                    </div>
+                    <div class="product-card-code">
+                        <?= e($p['kode_produk']) ?>
+                        <?php if (!empty($p['barcode_pabrik'])): ?>
+                            <span style="font-size: 11px; color: #64748b; margin-left: 4px;" title="Barcode Pabrik">| 🏭 <?= e($p['barcode_pabrik']) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <h3><?= e($p['nama_produk']) ?></h3>
+                    <p class="product-category"><?= e($p['nama_kategori'] ?? 'Tanpa kategori') ?></p>
+                    <div class="product-card-meta">
+                        <strong><?= format_rupiah($p['harga']) ?></strong>
+                        <span class="stock-pill <?= $stockClass ?>"><?= $stockLabel ?> <?= $stok ?></span>
+                    </div>
+                    <div class="product-card-actions">
+                        <a href="index.php?page=produk&action=adjust_stock&id=<?= e($p['id_produk']) ?>" class="btn btn-secondary btn-sm">Stok</a>
+                        <a href="index.php?page=produk&action=edit&id=<?= e($p['id_produk']) ?>" class="btn btn-primary btn-sm">Ubah</a>
+                        <?php if ($p['status'] === 'aktif'): ?>
+                            <form method="POST" action="index.php?page=produk" style="display: inline;" onsubmit="return ToKo.confirmDelete(this, '<?= e($p['nama_produk']) ?>');">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="post_action" value="delete">
+                                <input type="hidden" name="id_produk" value="<?= e($p['id_produk']) ?>">
+                                <button type="submit" class="btn btn-danger btn-sm" title="Nonaktifkan <?= e($p['nama_produk']) ?>">Hapus</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
 
     <div class="table-responsive">
         <table class="table">

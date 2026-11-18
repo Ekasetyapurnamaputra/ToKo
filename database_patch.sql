@@ -131,7 +131,19 @@ SET subtotal = total_belanja
 WHERE subtotal IS NULL;
 
 -- --------------------------------------------------------------------
--- 6. INDEX OPTIMASI (Untuk mempercepat JOIN dan Laporan)
+-- 6. KARTU MEMBER (kode yang dibaca scanner barcode)
+-- --------------------------------------------------------------------
+SET @col_exists := (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = 'db_tokokita' AND TABLE_NAME = 'tbl_pelanggan' AND COLUMN_NAME = 'kode_member');
+SET @sql := IF(@col_exists = 0, "ALTER TABLE tbl_pelanggan ADD COLUMN kode_member VARCHAR(50) NULL AFTER id_pelanggan", 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = 'db_tokokita' AND TABLE_NAME = 'tbl_pelanggan' AND INDEX_NAME = 'uq_kode_member');
+SET @sql := IF(@idx_exists = 0, 'ALTER TABLE tbl_pelanggan ADD UNIQUE KEY uq_kode_member (kode_member)', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- --------------------------------------------------------------------
+-- 7. INDEX OPTIMASI (Untuk mempercepat JOIN dan Laporan)
 -- --------------------------------------------------------------------
 -- Index tanggal transaksi untuk filter laporan cepat
 SET @idx_exists := (SELECT COUNT(*) FROM information_schema.STATISTICS 

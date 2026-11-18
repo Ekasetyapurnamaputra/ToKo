@@ -22,7 +22,7 @@ class Auth
         Session::start();
         $db = Database::getInstance();
 
-        $sql = "SELECT id_user, username, password, nama_lengkap, role FROM tbl_user WHERE username = :username LIMIT 1";
+        $sql = "SELECT id_user, id_pelanggan, username, password, nama_lengkap, role FROM tbl_user WHERE username = :username LIMIT 1";
         $user = $db->fetchOne($sql, [':username' => $username]);
 
         if (!$user) {
@@ -145,5 +145,12 @@ class Auth
             header("Location: {$redirectUrl}");
             exit;
         }
+    }
+
+    public static function dashboardUrl(): string
+    {
+        return self::hasRole('pelanggan')
+            ? 'index.php?page=member'
+            : 'index.php?page=dashboard';
     }
 }

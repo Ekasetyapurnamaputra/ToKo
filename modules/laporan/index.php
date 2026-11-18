@@ -11,7 +11,7 @@ require_once dirname(dirname(__DIR__)) . '/models/Laporan.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/security_helper.php';
 require_once dirname(dirname(__DIR__)) . '/helpers/format_helper.php';
 
-Auth::requireLogin();
+Auth::requireRole(['admin', 'kasir']);
 
 $tab = $_GET['tab'] ?? 'rentang';
 $ringkasan = Laporan::getRingkasanPendapatan();

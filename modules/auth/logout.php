@@ -12,5 +12,5 @@ Auth::logout();
 
 Session::start();
 Session::setFlash('info', 'Anda telah berhasil keluar dari sistem ToKo.');
-header('Location: index.php?page=login');
+header('Location: index.php?page=home');
 exit;
