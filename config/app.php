@@ -18,7 +18,7 @@ if (!defined('APP_NAME')) {
     define('APP_NAME', 'ToKo');
 }
 if (!defined('APP_VERSION')) {
-    define('APP_VERSION', '1.0.0');
+    define('APP_VERSION', '2.2.0');
 }
 if (!defined('BASE_URL')) {
     define('BASE_URL', $baseUrl);

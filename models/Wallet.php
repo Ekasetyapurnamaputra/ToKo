@@ -5,6 +5,7 @@
 
 require_once dirname(__DIR__) . '/core/Database.php';
 require_once dirname(__DIR__) . '/core/Logger.php';
+require_once dirname(__DIR__) . '/core/Duitku.php';
 
 class Wallet
 {
@@ -174,6 +175,124 @@ class Wallet
             $db->rollBack();
             error_log('[Wallet top-up rejection] ' . $error->getMessage());
             return ['success' => false, 'message' => 'Pengajuan tidak dapat ditolak. Periksa log server.'];
+        }
+    }
+
+    /**
+     * Membuat pengajuan top-up otomatis via Payment Gateway DUITKU
+     */
+    public static function requestDuitkuTopup(int $memberId, float $amount, string $channelCode, string $customerName, string $email = '', string $phone = ''): array
+    {
+        if ($memberId <= 0 || $amount < 1000 || $amount > 9999999999.99 || !is_finite($amount)) {
+            return ['success' => false, 'message' => 'Nominal top-up minimal Rp 1.000.'];
+        }
+
+        $orderId = 'TOPUP-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        $channels = Duitku::getChannels();
+        $channelName = $channels[$channelCode]['name'] ?? $channelCode;
+
+        $invoiceRes = Duitku::createInvoice([
+            'merchantOrderId' => $orderId,
+            'paymentAmount'   => (int)$amount,
+            'paymentMethod'   => $channelCode,
+            'productDetails'  => "Top-up Saldo Member ToKo ({$channelName})",
+            'customerVaName'  => $customerName,
+            'email'           => !empty($email) ? $email : 'member@tokokita.local',
+            'phoneNumber'     => !empty($phone) ? $phone : '081234567890',
+            'additionalParam' => (string)$memberId
+        ]);
+
+        if (!$invoiceRes['success']) {
+            return ['success' => false, 'message' => 'Gagal membuat transaksi Duitku: ' . ($invoiceRes['message'] ?? '')];
+        }
+
+        $db = Database::getInstance();
+        $db->execute(
+            "INSERT INTO tbl_topup_request 
+             (id_pelanggan, nominal, metode_pembayaran, referensi_pembayaran, catatan, status, tipe_pengajuan, duitku_reference, channel_code, payment_url, va_number, qr_string)
+             VALUES 
+             (:member_id, :nominal, :method, :ref, :catatan, 'menunggu', 'duitku', :duitku_ref, :channel_code, :payment_url, :va_number, :qr_string)",
+            [
+                ':member_id'     => $memberId,
+                ':nominal'       => number_format($amount, 2, '.', ''),
+                ':method'        => strtolower($channelCode),
+                ':ref'           => $orderId,
+                ':catatan'       => "Pembayaran online via Duitku ({$channelName})",
+                ':duitku_ref'    => $invoiceRes['reference'],
+                ':channel_code'  => $channelCode,
+                ':payment_url'   => $invoiceRes['payment_url'],
+                ':va_number'     => !empty($invoiceRes['va_number']) ? $invoiceRes['va_number'] : null,
+                ':qr_string'     => !empty($invoiceRes['qr_string']) ? $invoiceRes['qr_string'] : null
+            ]
+        );
+
+        $idTopup = (int)$db->lastInsertId();
+
+        Logger::log('DUITKU_TOPUP_INITIATED', "Pengajuan top-up Duitku #{$idTopup} ({$orderId}) sebesar Rp " . number_format($amount, 0, ',', '.') . " dibuat via {$channelName}.");
+
+        return [
+            'success'          => true,
+            'id_topup'         => $idTopup,
+            'order_id'         => $orderId,
+            'duitku_reference' => $invoiceRes['reference'],
+            'payment_url'      => $invoiceRes['payment_url'],
+            'va_number'        => $invoiceRes['va_number'],
+            'qr_string'        => $invoiceRes['qr_string'],
+            'channel_name'     => $channelName,
+            'amount'           => (int)$amount,
+            'message'          => "Transaksi pembayaran online Duitku berhasil dibuat."
+        ];
+    }
+
+    /**
+     * Memproses Webhook Callback Otomatis dari Server Duitku
+     * Memverifikasi Signature dan Mengkreditkan Saldo Member secara Real-Time
+     */
+    public static function processDuitkuCallback(array $callbackData): array
+    {
+        $verify = Duitku::verifyCallback($callbackData);
+        if (!$verify['valid']) {
+            return ['success' => false, 'code' => 400, 'message' => $verify['message']];
+        }
+
+        $orderId = $verify['merchant_order_id'];
+        $db = Database::getInstance();
+        $request = $db->fetchOne(
+            'SELECT * FROM tbl_topup_request WHERE referensi_pembayaran = :ref LIMIT 1',
+            [':ref' => $orderId]
+        );
+
+        if (!$request) {
+            return ['success' => false, 'code' => 404, 'message' => "Order #{$orderId} tidak ditemukan di sistem."];
+        }
+
+        // Idempotensi: jika sudah disetujui, return sukses tanpa proses ganda
+        if ($request['status'] === 'disetujui') {
+            return ['success' => true, 'code' => 200, 'message' => 'Transaksi sudah pernah disetujui sebelumnya.'];
+        }
+
+        if ($verify['is_paid']) {
+            $systemAdmin = $db->fetchOne("SELECT id_user FROM tbl_user WHERE role = 'admin' ORDER BY id_user ASC LIMIT 1");
+            $adminId = (int)($systemAdmin['id_user'] ?? 1);
+
+            $approve = self::approveTopup((int)$request['id_topup'], $adminId);
+            if ($approve['success']) {
+                $db->execute(
+                    "UPDATE tbl_topup_request 
+                     SET waktu_bayar = NOW(), 
+                         catatan = CONCAT(COALESCE(catatan, ''), ' [Duitku Lunas: Ref ', :ref, ']') 
+                     WHERE id_topup = :id",
+                    [':ref' => $verify['reference'], ':id' => $request['id_topup']]
+                );
+                Logger::log('DUITKU_CALLBACK_PROCESSED', "Callback Duitku sukses: Saldo Rp " . number_format($request['nominal'], 0, ',', '.') . " telah dikreditkan ke Member #{$request['id_pelanggan']} (Order: {$orderId})");
+                return ['success' => true, 'code' => 200, 'message' => 'Pembayaran berhasil dikonfirmasi dan saldo telah ditambahkan.'];
+            }
+            return ['success' => false, 'code' => 500, 'message' => $approve['message']];
+        } else {
+            // Status pembayaran ditolak atau kedaluwarsa
+            $db->execute("UPDATE tbl_topup_request SET status = 'ditolak' WHERE id_topup = :id", [':id' => $request['id_topup']]);
+            Logger::log('DUITKU_PAYMENT_FAILED', "Pembayaran Duitku tidak diselesaikan untuk Order #{$orderId}.");
+            return ['success' => true, 'code' => 200, 'message' => 'Status pembayaran diperbarui (tidak lunas).'];
         }
     }
 }

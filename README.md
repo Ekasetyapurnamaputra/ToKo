@@ -15,6 +15,7 @@ Aplikasi Sistem Informasi Penjualan Toko dan Kasir Point of Sale (POS) berbasis 
 
 2. **Kasir Point of Sale (POS) & Transaksi**:
    - Pemilihan pelanggan dinamis dengan opsi diskon belanja (%).
+   - Pembayaran saldo member atau Duitku (kanal aktif dimuat dari API), termasuk callback konfirmasi pembayaran.
    - Keranjang belanja dinamis berbasis JavaScript.
    - Validasi stok server-side & client-side secara real-time.
    - Input uang tunai (`uang_bayar`) dengan tombol pintas nominal (Uang Pas, 50k, 100k, 200k, 500k).
@@ -147,6 +148,15 @@ Buka web browser dan akses URL:
 http://localhost/ToKo
 ```
 
+### 6. Konfigurasi Payment Gateway Duitku
+1. Terapkan `database_duitku_payment_patch.sql` pada database `db_tokokita`.
+2. Salin `config/duitku.example.php` menjadi `config/duitku.php`, lalu isi `merchant_code` dan `api_key` dari portal merchant Duitku. File kredensial lokal tersebut sudah dikecualikan dari Git.
+3. Gunakan `sandbox => true` untuk pengujian dan ubah ke `false` setelah kredensial production aktif.
+4. Aktifkan ekstensi PHP `cURL` dan pastikan aplikasi dapat diakses melalui URL publik HTTPS agar Duitku dapat memanggil callback.
+5. Atur URL callback pada project Duitku ke `https://alamat-toko/index.php?page=transaksi&action=duitku_callback`. Return URL dikirim otomatis saat kasir membuat pembayaran.
+
+Kasir memilih **Payment gateway Duitku**, mengisi email pelanggan, lalu memilih kanal pembayaran yang tersedia. Stok ditahan saat tagihan dibuat, dilepas setelah 60 menit bila belum dibayar (saat aplikasi kasir diakses kembali), dan transaksi baru berstatus lunas setelah callback Duitku tervalidasi. Jangan pernah mengirim atau menaruh API key di JavaScript/browser.
+
 ---
 
 ## 🔐 Akun Login Default
@@ -165,6 +175,10 @@ Aplikasi dilengkapi skrip pengujian sistem otomatis (17 pengujian keamanan, inte
 Untuk menjalankan pengujian melalui terminal:
 ```bash
 php tests/system_test.php
+```
+Pengujian tanda tangan callback Duitku tanpa menghubungi gateway:
+```bash
+php tests/duitku_payment_test.php
 ```
 
 ---

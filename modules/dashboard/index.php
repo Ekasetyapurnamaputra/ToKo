@@ -27,7 +27,8 @@ $totalProducts = (int)($db->fetchOne('SELECT COUNT(*) AS total FROM tbl_produk')
 $dailyRows = $db->fetchAll(
     "SELECT DATE(tanggal) AS sale_day, COALESCE(SUM(total_belanja), 0) AS revenue, COUNT(*) AS transactions
      FROM tbl_transaksi
-     WHERE tanggal >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+     WHERE status_pembayaran = 'lunas'
+       AND tanggal >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
        AND tanggal < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
      GROUP BY DATE(tanggal)
      ORDER BY sale_day ASC"
@@ -61,12 +62,18 @@ for ($dayOffset = 0; $dayOffset < 7; $dayOffset++) {
 
 $topProducts = $db->fetchAll(
     "SELECT nama_produk, COALESCE(SUM(jumlah), 0) AS units
-     FROM tbl_detail_transaksi
+     FROM tbl_detail_transaksi dt
+     JOIN tbl_transaksi t ON t.id_transaksi = dt.id_transaksi AND t.status_pembayaran = 'lunas'
      GROUP BY nama_produk
      ORDER BY units DESC, nama_produk ASC
      LIMIT 4"
 );
-$totalUnits = (int)($db->fetchOne('SELECT COALESCE(SUM(jumlah), 0) AS total FROM tbl_detail_transaksi')['total'] ?? 0);
+$totalUnits = (int)($db->fetchOne(
+    "SELECT COALESCE(SUM(dt.jumlah), 0) AS total
+     FROM tbl_detail_transaksi dt
+     JOIN tbl_transaksi t ON t.id_transaksi = dt.id_transaksi
+     WHERE t.status_pembayaran = 'lunas'"
+)['total'] ?? 0);
 $featuredUnits = array_sum(array_map(static fn(array $product): int => (int)$product['units'], $topProducts));
 $otherUnits = max(0, $totalUnits - $featuredUnits);
 $palette = ['#4163c7', '#7990df', '#a8b7eb', '#d2daf3', '#e9edf7'];
@@ -94,11 +101,12 @@ $donutBackground = $gradientStops
     : 'conic-gradient(#e9edf7 0% 100%)';
 
 $recentTransactions = $db->fetchAll(
-    'SELECT t.id_transaksi, t.tanggal, t.total_belanja, p.nama_pelanggan
+    "SELECT t.id_transaksi, t.tanggal, t.total_belanja, p.nama_pelanggan
      FROM tbl_transaksi t
      LEFT JOIN tbl_pelanggan p ON p.id_pelanggan = t.id_pelanggan
+     WHERE t.status_pembayaran = 'lunas'
      ORDER BY t.id_transaksi DESC
-     LIMIT 5'
+     LIMIT 5"
 );
 $recentLogs = Log::getLogs(null, null, null, null, 4);
 

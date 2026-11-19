@@ -22,7 +22,7 @@ class Pelanggan
                            COUNT(t.id_transaksi) AS total_transaksi,
                            COALESCE(SUM(t.total_belanja), 0) AS total_belanja
                     FROM tbl_pelanggan p
-                    LEFT JOIN tbl_transaksi t ON p.id_pelanggan = t.id_pelanggan
+                    LEFT JOIN tbl_transaksi t ON p.id_pelanggan = t.id_pelanggan AND t.status_pembayaran = 'lunas'
                     WHERE p.nama_pelanggan LIKE :kw1 OR p.kota LIKE :kw2
                     GROUP BY p.id_pelanggan, p.nama_pelanggan, p.kota, p.kode_member, p.saldo
                     ORDER BY p.id_pelanggan DESC";

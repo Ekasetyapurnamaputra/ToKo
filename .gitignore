@@ -18,6 +18,7 @@ error_log
 tests/*_smoke.php
 tests/temp_*.php
 scratch/
+config/duitku.php
 
 # Pastikan file database dump tetap ter-commit ke GitHub
 !database/

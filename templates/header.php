@@ -20,7 +20,7 @@ $currentPage = $_GET['page'] ?? 'dashboard';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= isset($pageTitle) ? e($pageTitle) . ' — ' : '' ?><?= e(APP_NAME) ?></title>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= APP_VERSION ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/style.css') ? filemtime(dirname(__DIR__) . '/assets/css/style.css') : APP_VERSION ?>">
     <!-- React dipakai sebagai enhancement UI tanpa memutus backend PHP. -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>

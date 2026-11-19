@@ -24,7 +24,8 @@ class Laporan
                     COALESCE(SUM(CASE WHEN tanggal = CURDATE() THEN total_belanja ELSE 0 END), 0) AS total_hari_ini,
                     COUNT(CASE WHEN DATE_FORMAT(tanggal, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN 1 END) AS transaksi_bulan_ini,
                     COALESCE(SUM(CASE WHEN DATE_FORMAT(tanggal, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') THEN total_belanja ELSE 0 END), 0) AS total_bulan_ini
-                FROM tbl_transaksi";
+                FROM tbl_transaksi
+                WHERE status_pembayaran = 'lunas'";
 
         return $db->fetchOne($sql) ?? [
             'total_transaksi_semua' => 0,
@@ -96,7 +97,8 @@ class Laporan
                     FROM tbl_detail_transaksi
                     GROUP BY id_transaksi
                 ) dt_agg ON t.id_transaksi = dt_agg.id_transaksi
-                WHERE t.tanggal BETWEEN :tgl_mulai AND :tgl_selesai
+                WHERE t.status_pembayaran = 'lunas'
+                  AND t.tanggal BETWEEN :tgl_mulai AND :tgl_selesai
                 ORDER BY t.tanggal DESC, t.id_transaksi DESC";
 
         return $db->fetchAll($sql, [

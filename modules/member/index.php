@@ -22,15 +22,15 @@ if (!$member) {
 }
 
 $transactions = Database::getInstance()->fetchAll(
-    'SELECT id_transaksi, tanggal, total_belanja, metode_pembayaran
+    "SELECT id_transaksi, tanggal, total_belanja, metode_pembayaran
      FROM tbl_transaksi
-     WHERE id_pelanggan = :member_id
+     WHERE id_pelanggan = :member_id AND status_pembayaran = 'lunas'
      ORDER BY id_transaksi DESC
-     LIMIT 8',
+     LIMIT 8",
     [':member_id' => $member['id_pelanggan']]
 );
 $purchaseCount = (int)(Database::getInstance()->fetchOne(
-    'SELECT COUNT(*) AS total FROM tbl_transaksi WHERE id_pelanggan = :member_id',
+    "SELECT COUNT(*) AS total FROM tbl_transaksi WHERE id_pelanggan = :member_id AND status_pembayaran = 'lunas'",
     [':member_id' => $member['id_pelanggan']]
 )['total'] ?? 0);
 $mutations = Wallet::getLedger((int)$member['id_pelanggan'], 6);
